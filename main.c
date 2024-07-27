@@ -130,53 +130,58 @@ int capture_process(char **args, Buffer *output) {
 int resolve_packages(char **argv, size_t argc, char *pflag, char *cflag, char *dir) {
     int result = 1;
 
-    Buffer final = {0};
     Buffer buffer = {0};
     const char *base = getenv("CPRPATH");
 
     for (size_t i = 0; i < argc; i++) {
-        buffer.count = 0;
+        int found = 1;
+        size_t head = buffer.count;
 
         char *pkg = argv[i];
         char *args[] = {"pkg-config", pflag, pkg, NULL};
-        if (capture_process(args, &buffer)) {
-            if (final.count && final.data[final.count - 1] != ' ') {
-                da_append(&final, ' ');
-            }
-            da_append_many(&final, buffer.data, buffer.count);
-        } else {
+
+        if (!capture_process(args, &buffer)) {
+            buffer.count = head;
+
             if (base) {
+                da_append_many(&buffer, cflag, strlen(cflag));
                 da_append_many(&buffer, base, strlen(base));
                 da_append(&buffer, '/');
                 da_append_many(&buffer, pkg, strlen(pkg));
                 da_append(&buffer, '/');
-                da_append_many(&buffer, dir, strlen(dir) + 1);
+                da_append_many(&buffer, dir, strlen(dir));
+                da_append(&buffer, '\0');
 
-                if (is_directory(buffer.data)) {
-                    if (final.count && final.data[final.count - 1] != ' ') {
-                        da_append(&final, ' ');
-                    }
-                    da_append_many(&final, cflag, strlen(cflag));
-                    da_append_many(&final, buffer.data, buffer.count - 1);
-                } else {
-                    fprintf(stderr, "Error: package '%s' not found\n", pkg);
-                    return_defer(0);
+                if (!is_directory(buffer.data + head + strlen(cflag))) {
+                    found = 0;
                 }
-            } else {
-                fprintf(stderr, "Error: package '%s' not found\n", pkg);
-                fprintf(stderr, "Note: set up the 'CPRPATH' variable to access local packages\n");
-                return_defer(0);
+
+                buffer.count--;
             }
+        }
+
+        if (found) {
+            if (buffer.count && buffer.data[buffer.count - 1] != ' ') {
+                da_append(&buffer, ' ');
+            }
+        } else {
+            buffer.count = head;
+
+            fprintf(stderr, "Error: package '%s' not found\n", pkg);
+            if (!base) {
+                fprintf(stderr, "Note: set up the 'CPRPATH' variable to access local packages\n");
+            }
+
+            return_defer(0);
         }
     }
 
-    if (final.count) {
-        fwrite(final.data, final.count, 1, stdout);
+    if (buffer.count) {
+        fwrite(buffer.data, buffer.count, 1, stdout);
         putc('\n', stdout);
     }
 
 defer:
-    free(final.data);
     free(buffer.data);
     return result;
 }
