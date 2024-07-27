@@ -1,6 +1,8 @@
 # C Package Resolver
 
 ## Quick Start
+Calls `pkg-config` as an external process
+
 ```console
 $ ./build.sh
 $ ./cpr flags xft x11
