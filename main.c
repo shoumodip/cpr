@@ -188,7 +188,7 @@ defer:
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        fprintf(stderr, "Error: command not found\n");
+        fprintf(stderr, "Error: command not provided\n");
         fprintf(stderr, "Usage: cpr <flags|libs> [...PKGS]\n");
         exit(1);
     }
