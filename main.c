@@ -177,6 +177,10 @@ int resolve_packages(char **argv, size_t argc, char *pflag, char *cflag, char *d
     }
 
     if (buffer.count) {
+        if (buffer.data[buffer.count - 1] == ' ') {
+            buffer.count--;
+        }
+
         fwrite(buffer.data, buffer.count, 1, stdout);
         putc('\n', stdout);
     }
